@@ -30,6 +30,9 @@ else:
 conn = sqlite3.connect(DB_NAME)
 cursor = conn.cursor()
 
+# Ensure foreign keys are enabled
+cursor.execute("PRAGMA foreign_keys = ON")
+
 # Create initial schema
 cursor.execute("""
     CREATE TABLE IF NOT EXISTS app_info (
@@ -50,14 +53,43 @@ cursor.execute("""
     )
 """)
 
+# Create todos table for the todo application
+# Columns:
+# - id INTEGER PRIMARY KEY
+# - title TEXT NOT NULL
+# - completed INTEGER DEFAULT 0
+# - created_at TIMESTAMP
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS todos (
+        id INTEGER PRIMARY KEY,
+        title TEXT NOT NULL,
+        completed INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+""")
+
+# Seed sample todos only if no records exist
+cursor.execute("SELECT COUNT(*) FROM todos")
+todo_count = cursor.fetchone()[0] or 0
+if todo_count == 0:
+    cursor.execute(
+        "INSERT INTO todos (title, completed) VALUES (?, ?)",
+        ("Welcome to your todo list", 0),
+    )
+    cursor.execute(
+        "INSERT INTO todos (title, completed) VALUES (?, ?)",
+        ("Mark me complete to get started", 0),
+    )
+    print("Seeded initial todos (2 rows).")
+
 # Insert initial data
-cursor.execute("INSERT OR REPLACE INTO app_info (key, value) VALUES (?, ?)", 
+cursor.execute("INSERT OR REPLACE INTO app_info (key, value) VALUES (?, ?)",
                ("project_name", "database"))
-cursor.execute("INSERT OR REPLACE INTO app_info (key, value) VALUES (?, ?)", 
+cursor.execute("INSERT OR REPLACE INTO app_info (key, value) VALUES (?, ?)",
                ("version", "0.1.0"))
-cursor.execute("INSERT OR REPLACE INTO app_info (key, value) VALUES (?, ?)", 
+cursor.execute("INSERT OR REPLACE INTO app_info (key, value) VALUES (?, ?)",
                ("author", "John Doe"))
-cursor.execute("INSERT OR REPLACE INTO app_info (key, value) VALUES (?, ?)", 
+cursor.execute("INSERT OR REPLACE INTO app_info (key, value) VALUES (?, ?)",
                ("description", ""))
 
 conn.commit()
@@ -68,6 +100,10 @@ table_count = cursor.fetchone()[0]
 
 cursor.execute("SELECT COUNT(*) FROM app_info")
 record_count = cursor.fetchone()[0]
+
+# Count todos for info
+cursor.execute("SELECT COUNT(*) FROM todos")
+todos_records = cursor.fetchone()[0]
 
 conn.close()
 
@@ -116,6 +152,7 @@ print("")
 print("Database statistics:")
 print(f"  Tables: {table_count}")
 print(f"  App info records: {record_count}")
+print(f"  Todos records: {todos_records}")
 
 # If sqlite3 CLI is available, show how to use it
 try:
